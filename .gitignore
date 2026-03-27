@@ -208,3 +208,7 @@ __marimo__/
 
 # Raw Data
 raw_data/
+
+# Claude Code
+.claude/
+CLAUDE.md

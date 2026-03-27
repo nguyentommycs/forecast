@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(find . -not -path ./.venv/* -not -path ./.git/* -type f)",
-      "Bash(gh pr:*)"
-    ]
-  }
-}
