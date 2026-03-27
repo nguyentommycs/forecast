@@ -87,8 +87,13 @@ def main() -> None:
 
     rmse = mean_squared_error(y_test, preds) ** 0.5
     mae = mean_absolute_error(y_test, preds)
+    # MAPE only over rows where actual > 0 to avoid division by zero
+    nonzero = y_test > 0
+    mape = (np.abs(preds[nonzero] - y_test[nonzero]) / y_test[nonzero]).mean() * 100
+
     print(f"\nTest RMSE: {rmse:.2f}")
     print(f"Test MAE:  {mae:.2f}")
+    print(f"Test MAPE: {mape:.1f}%")
 
     MODEL_DIR.mkdir(exist_ok=True)
     model.booster_.save_model(str(MODEL_FILE))
