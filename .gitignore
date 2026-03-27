@@ -205,3 +205,10 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Raw Data
+raw_data/
+
+# Claude Code
+.claude/
+CLAUDE.md
