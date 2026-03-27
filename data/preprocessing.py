@@ -1,6 +1,6 @@
 """
 Loads raw NYC Yellow Taxi parquet files, cleans and aggregates trip counts
-into 10-minute buckets per zone, and writes processed_data/aggregated.parquet.
+into 1-hour buckets per zone, and writes processed_data/aggregated.parquet.
 """
 
 from pathlib import Path
@@ -13,7 +13,7 @@ OUTPUT_FILE = OUTPUT_DIR / "aggregated.parquet"
 
 VALID_ZONE_MIN = 1
 VALID_ZONE_MAX = 263
-BUCKET_MINUTES = 10
+BUCKET_HOURS = 1
 
 
 def load_and_clean(path: Path) -> pl.DataFrame:
@@ -31,7 +31,7 @@ def aggregate(df: pl.DataFrame) -> pl.DataFrame:
     return (
         df.with_columns(
             (
-                pl.col("tpep_pickup_datetime").dt.truncate(f"{BUCKET_MINUTES}m")
+                pl.col("tpep_pickup_datetime").dt.truncate(f"{BUCKET_HOURS}h")
             ).alias("time_bucket")
         )
         .group_by(["zone_id", "time_bucket"])

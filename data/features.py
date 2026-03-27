@@ -1,5 +1,5 @@
 """
-Builds a supervised learning dataset from the aggregated trip counts.
+Builds a supervised learning dataset from the hourly aggregated trip counts.
 Computes lag and rolling-mean features per zone, then writes
 processed_data/features.parquet.
 """
@@ -11,9 +11,9 @@ import polars as pl
 INPUT_FILE = Path(__file__).parent.parent / "processed_data" / "aggregated.parquet"
 OUTPUT_FILE = Path(__file__).parent.parent / "processed_data" / "features.parquet"
 
-# Lag offsets in number of 10-minute buckets
-LAG_OFFSETS = [1, 2, 3, 6, 12]
-ROLLING_WINDOW = 6  # 1 hour
+# Lag offsets in number of 1-hour buckets
+LAG_OFFSETS = [1, 2, 3, 6, 12, 24]  # up to same hour yesterday
+ROLLING_WINDOW = 6  # 6-hour rolling mean
 
 
 def build_features(df: pl.DataFrame) -> pl.DataFrame:
