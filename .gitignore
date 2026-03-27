@@ -209,6 +209,10 @@ __marimo__/
 # Raw Data
 raw_data/
 
+# Generated artifacts
+processed_data/
+models/
+
 # Claude Code
 .claude/
 CLAUDE.md
