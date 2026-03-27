@@ -208,6 +208,7 @@ __marimo__/
 
 # Raw Data
 raw_data/
+streamed_data/
 
 # Generated artifacts
 processed_data/
