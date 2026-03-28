@@ -2,7 +2,7 @@
 Streamlit dashboard for real-time NYC taxi demand visualization.
 
 Polls /predict/batch every 10 seconds and renders:
-  - Choropleth map of all zones colored by predicted trip count
+  - Bar chart of top 30 zones by predicted trip count
   - Side panel with a time series for the selected zone
 
 Usage:
@@ -12,7 +12,9 @@ Usage:
 import json
 import time
 from datetime import datetime, timedelta
+from pathlib import Path
 
+import pandas as pd
 import plotly.graph_objects as go
 import redis
 import requests
@@ -23,17 +25,14 @@ REDIS_HOST = "localhost"
 REDIS_PORT = 6379
 ALL_ZONES = list(range(1, 264))
 REFRESH_INTERVAL = 10
-GEOJSON_URL = (
-    "https://data.cityofnewyork.us/api/geospatial/d3c5-ddgc"
-    "?method=export&type=GeoJSON"
-)
+ZONE_LOOKUP = Path(__file__).parent.parent / "reference_data" / "taxi_zone_lookup.csv"
 
 
-@st.cache_data(ttl=86400)
-def load_geojson() -> dict:
-    resp = requests.get(GEOJSON_URL, timeout=30)
-    resp.raise_for_status()
-    return resp.json()
+@st.cache_data
+def load_zone_lookup() -> pd.DataFrame:
+    df = pd.read_csv(ZONE_LOOKUP)
+    df.columns = [c.strip() for c in df.columns]
+    return df.set_index("LocationID")
 
 
 @st.cache_resource
@@ -62,12 +61,15 @@ def fetch_zone_features(zone_id: int) -> dict | None:
 st.set_page_config(page_title="NYC Taxi Demand", layout="wide")
 st.title("NYC Taxi Demand — Live Forecast")
 
+zone_lookup = load_zone_lookup()
+
 with st.sidebar:
     st.header("Zone Inspector")
     selected_zone = st.number_input("Zone ID", min_value=1, max_value=263, value=132)
+    if selected_zone in zone_lookup.index:
+        row = zone_lookup.loc[selected_zone]
+        st.caption(f"{row['Zone']}, {row['Borough']}")
     st.caption(f"Auto-refreshes every {REFRESH_INTERVAL}s")
-
-geojson = load_geojson()
 
 try:
     preds = fetch_predictions()
@@ -75,37 +77,41 @@ except Exception as e:
     st.error(f"API unavailable: {e}")
     st.stop()
 
-# ── Choropleth map ────────────────────────────────────────────────────────────
+# ── Top zones bar chart ───────────────────────────────────────────────────────
 
-zone_ids = list(preds.keys())
-trip_counts = list(preds.values())
+df_preds = (
+    pd.DataFrame(preds.items(), columns=["zone_id", "predicted_trips"])
+    .sort_values("predicted_trips", ascending=False)
+    .head(30)
+)
+df_preds["label"] = df_preds["zone_id"].apply(
+    lambda z: zone_lookup.loc[z, "Zone"] if z in zone_lookup.index else str(z)
+)
 
-fig_map = go.Figure(
-    go.Choroplethmapbox(
-        geojson=geojson,
-        locations=[str(z) for z in zone_ids],
-        z=trip_counts,
-        featureidkey="properties.location_id",
-        colorscale="YlOrRd",
-        zmin=0,
-        zmax=max(trip_counts) if trip_counts else 100,
-        marker_opacity=0.7,
-        marker_line_width=0.5,
-        colorbar_title="Predicted<br>Trips/hr",
+fig_bar = go.Figure(
+    go.Bar(
+        x=df_preds["predicted_trips"],
+        y=df_preds["label"],
+        orientation="h",
+        marker_color=df_preds["predicted_trips"],
+        marker_colorscale="YlOrRd",
+        marker_showscale=True,
+        marker_colorbar=dict(title="Trips/hr"),
     )
 )
-fig_map.update_layout(
-    mapbox_style="carto-positron",
-    mapbox_zoom=9.5,
-    mapbox_center={"lat": 40.7128, "lon": -74.0060},
-    margin={"r": 0, "t": 0, "l": 0, "b": 0},
-    height=550,
+fig_bar.update_layout(
+    title="Top 30 Zones by Predicted Demand",
+    xaxis_title="Predicted Trips / hr",
+    yaxis=dict(autorange="reversed"),
+    height=600,
+    margin={"t": 40, "b": 40},
 )
-st.plotly_chart(fig_map, use_container_width=True)
+st.plotly_chart(fig_bar, use_container_width=True)
 
 # ── Zone time series ──────────────────────────────────────────────────────────
 
-st.subheader(f"Zone {selected_zone} — Demand History & Prediction")
+zone_name = zone_lookup.loc[selected_zone, "Zone"] if selected_zone in zone_lookup.index else str(selected_zone)
+st.subheader(f"Zone {selected_zone} ({zone_name}) — Demand History & Prediction")
 
 features = fetch_zone_features(selected_zone)
 zone_pred = preds.get(selected_zone)
@@ -117,7 +123,6 @@ elif zone_pred is None:
 else:
     now = datetime.now().replace(minute=0, second=0, microsecond=0)
 
-    # 3 most recent consecutive hourly actuals + prediction for the next hour
     hist_times = [now - timedelta(hours=3), now - timedelta(hours=2), now - timedelta(hours=1)]
     hist_values = [features["lag_3"], features["lag_2"], features["lag_1"]]
     pred_times = [now - timedelta(hours=1), now + timedelta(hours=1)]
