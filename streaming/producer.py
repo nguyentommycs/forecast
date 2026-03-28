@@ -89,8 +89,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--seconds-per-hour",
         type=float,
-        default=30.0,
-        help="Wall seconds to spend per simulated hour (default: 30). Use 0 for unlimited.",
+        default=15.0,
+        help="Wall seconds to spend per simulated hour (default: 15). Use 0 for unlimited.",
     )
     args = parser.parse_args()
     main(args.seconds_per_hour)

@@ -28,7 +28,7 @@ REDIS_HOST = "localhost"
 REDIS_PORT = 6379
 
 HISTORY_LEN = 24  # hours of completed buckets to keep (covers lag_24)
-LAG_OFFSETS = [1, 2, 3, 6, 12, 24]
+LAG_OFFSETS = [1, 2, 3, 4, 5, 6, 12, 24]
 ROLLING_WINDOW = 6
 
 

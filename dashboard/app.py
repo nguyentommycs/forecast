@@ -61,6 +61,9 @@ def fetch_zone_features(zone_id: int) -> dict | None:
 st.set_page_config(page_title="NYC Taxi Demand", layout="wide")
 st.title("NYC Taxi Demand — Live Forecast")
 
+if "pred_history" not in st.session_state:
+    st.session_state.pred_history = {}
+
 zone_lookup = load_zone_lookup()
 
 with st.sidebar:
@@ -80,6 +83,19 @@ try:
 except Exception as e:
     st.error(f"API unavailable: {e}")
     st.stop()
+
+# Record predictions for all zones in one Redis pipeline so history is
+# available immediately when the user switches zones.
+pipe = get_redis().pipeline()
+for zone_id in preds:
+    pipe.get(f"features:{zone_id}")
+for zone_id, raw in zip(preds, pipe.execute()):
+    if raw is not None:
+        f = json.loads(raw)
+        zone_history = st.session_state.pred_history.setdefault(zone_id, {})
+        zone_history[f["bucket"]] = preds[zone_id]
+        if len(zone_history) > 8:
+            del zone_history[sorted(zone_history)[0]]
 
 # ── Top zones bar chart ───────────────────────────────────────────────────────
 
@@ -126,9 +142,14 @@ elif zone_pred is None:
 else:
     current_bucket = datetime.fromisoformat(features["bucket"])
 
+    with st.sidebar:
+        st.divider()
+        st.caption("Simulated time")
+        st.write((current_bucket - timedelta(hours=1)).strftime("%a %b %d, %Y  %H:%M"))
+
     hist_times = [current_bucket - timedelta(hours=3), current_bucket - timedelta(hours=2), current_bucket - timedelta(hours=1)]
     hist_values = [features["lag_3"], features["lag_2"], features["lag_1"]]
-    pred_times = [current_bucket - timedelta(hours=1), current_bucket + timedelta(hours=1)]
+    pred_times = [current_bucket - timedelta(hours=1), current_bucket]
     pred_values = [features["lag_1"], zone_pred]
 
     fig_ts = go.Figure()
@@ -151,7 +172,7 @@ else:
         )
     )
     fig_ts.update_layout(
-        xaxis_title="Time",
+        xaxis=dict(title="Time", dtick=3600000, tickformat="%H:%M"),
         yaxis_title="Trip Count",
         height=300,
         margin={"t": 20},
@@ -162,6 +183,38 @@ else:
     col1, col2 = st.columns(2)
     col1.metric("Predicted next hour", f"{zone_pred:.0f} trips")
     col2.metric("Last hour (actual)", f"{int(features['lag_1'])} trips")
+
+    # ── Prediction vs Actuals ─────────────────────────────────────────────────
+
+    st.subheader(f"{selected_label} — Prediction vs Actual (last 6 completed hours)")
+
+    zone_history = st.session_state.pred_history.get(selected_zone, {})
+    comparison_rows = []
+    for n, lag_key in [(6, "lag_6"), (5, "lag_5"), (4, "lag_4"), (3, "lag_3"), (2, "lag_2"), (1, "lag_1")]:
+        past_bucket_iso = (current_bucket - timedelta(hours=n)).isoformat()
+        stored_pred = zone_history.get(past_bucket_iso)
+        if stored_pred is not None:
+            comparison_rows.append({
+                "hour": (current_bucket - timedelta(hours=n)).strftime("%H:%M"),
+                "predicted": stored_pred,
+                "actual": features[lag_key],
+            })
+
+    if not comparison_rows:
+        st.info("Accumulating prediction history — chart fills in as simulated hours pass.")
+    else:
+        df_cmp = pd.DataFrame(comparison_rows)
+        fig_cmp = go.Figure()
+        fig_cmp.add_trace(go.Scatter(name="Predicted", x=df_cmp["hour"], y=df_cmp["predicted"], mode="lines+markers", line=dict(color="#ff7f0e")))
+        fig_cmp.add_trace(go.Scatter(name="Actual", x=df_cmp["hour"], y=df_cmp["actual"], mode="lines+markers", line=dict(color="#1f77b4")))
+        fig_cmp.update_layout(
+            xaxis_title="Hour (simulated)",
+            yaxis_title="Trip Count",
+            height=300,
+            margin={"t": 20},
+            legend=dict(orientation="h", y=1.1),
+        )
+        st.plotly_chart(fig_cmp, use_container_width=True)
 
 # ── Auto-refresh ──────────────────────────────────────────────────────────────
 
