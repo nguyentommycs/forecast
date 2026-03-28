@@ -142,6 +142,11 @@ elif zone_pred is None:
 else:
     current_bucket = datetime.fromisoformat(features["bucket"])
 
+    with st.sidebar:
+        st.divider()
+        st.caption("Simulated time")
+        st.write(current_bucket.strftime("%a %b %d, %Y  %H:%M"))
+
     hist_times = [current_bucket - timedelta(hours=3), current_bucket - timedelta(hours=2), current_bucket - timedelta(hours=1)]
     hist_values = [features["lag_3"], features["lag_2"], features["lag_1"]]
     pred_times = [current_bucket - timedelta(hours=1), current_bucket + timedelta(hours=1)]
