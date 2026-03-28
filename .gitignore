@@ -212,7 +212,6 @@ streamed_data/
 
 # Generated artifacts
 processed_data/
-models/
 
 # Claude Code
 .claude/
