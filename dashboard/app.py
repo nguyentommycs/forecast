@@ -185,7 +185,7 @@ else:
 
     zone_history = st.session_state.pred_history.get(selected_zone, {})
     comparison_rows = []
-    for n, lag_key in [(1, "lag_1"), (2, "lag_2"), (3, "lag_3"), (4, "lag_4"), (5, "lag_5"), (6, "lag_6")]:
+    for n, lag_key in [(6, "lag_6"), (5, "lag_5"), (4, "lag_4"), (3, "lag_3"), (2, "lag_2"), (1, "lag_1")]:
         past_bucket_iso = (current_bucket - timedelta(hours=n)).isoformat()
         stored_pred = zone_history.get(past_bucket_iso)
         if stored_pred is not None:
