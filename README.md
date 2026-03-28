@@ -56,18 +56,13 @@ pip install -r requirements.txt
 
 ## Data Preparation
 
-Run these steps once before starting the streaming pipeline.
+Run this once before starting the streaming pipeline, and any time you add new data:
 
 ```bash
-# Aggregate raw parquet data into 10-minute trip count buckets
-python data/preprocessing.py
-
-# Build the supervised learning feature dataset
-python data/features.py
-
-# Train the LightGBM model — saves to models/model.lgb, prints RMSE/MAE
-python training/train.py
+python retrain.py
 ```
+
+This runs preprocessing → feature engineering → model training in sequence and saves the model to `models/model.lgb`.
 
 ---
 
