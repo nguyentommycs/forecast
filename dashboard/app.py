@@ -125,7 +125,7 @@ zone_pred = preds.get(selected_zone)
 if features is not None and zone_pred is not None:
     zone_history = st.session_state.pred_history.setdefault(selected_zone, {})
     zone_history[features["bucket"]] = zone_pred
-    if len(zone_history) > 6:
+    if len(zone_history) > 8:
         del zone_history[sorted(zone_history)[0]]
 
 if features is None:
@@ -174,11 +174,11 @@ else:
 
     # ── Prediction vs Actuals ─────────────────────────────────────────────────
 
-    st.subheader(f"{selected_label} — Prediction vs Actual (last 3 completed hours)")
+    st.subheader(f"{selected_label} — Prediction vs Actual (last 6 completed hours)")
 
     zone_history = st.session_state.pred_history.get(selected_zone, {})
     comparison_rows = []
-    for n, lag_key in [(1, "lag_1"), (2, "lag_2"), (3, "lag_3")]:
+    for n, lag_key in [(1, "lag_1"), (2, "lag_2"), (3, "lag_3"), (4, "lag_4"), (5, "lag_5"), (6, "lag_6")]:
         past_bucket_iso = (current_bucket - timedelta(hours=n)).isoformat()
         stored_pred = zone_history.get(past_bucket_iso)
         if stored_pred is not None:
@@ -193,10 +193,9 @@ else:
     else:
         df_cmp = pd.DataFrame(comparison_rows)
         fig_cmp = go.Figure()
-        fig_cmp.add_trace(go.Bar(name="Predicted", x=df_cmp["hour"], y=df_cmp["predicted"], marker_color="#ff7f0e"))
-        fig_cmp.add_trace(go.Bar(name="Actual", x=df_cmp["hour"], y=df_cmp["actual"], marker_color="#1f77b4"))
+        fig_cmp.add_trace(go.Scatter(name="Predicted", x=df_cmp["hour"], y=df_cmp["predicted"], mode="lines+markers", line=dict(color="#ff7f0e")))
+        fig_cmp.add_trace(go.Scatter(name="Actual", x=df_cmp["hour"], y=df_cmp["actual"], mode="lines+markers", line=dict(color="#1f77b4")))
         fig_cmp.update_layout(
-            barmode="group",
             xaxis_title="Hour (simulated)",
             yaxis_title="Trip Count",
             height=300,
