@@ -13,6 +13,21 @@ Real-time taxi demand prediction system using NYC Yellow Taxi data. Predicts tri
 
 ---
 
+## Data Download
+
+### Yellow Taxi Trip Records
+
+1. Go to [TLC Trip Record Data](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page)
+2. Under **Yellow Taxi Trip Records**, download the Parquet files for the months you want to use
+3. Place each file into the `raw_data/` folder — filenames should follow the pattern `yellow_tripdata_YYYY-MM.parquet`
+
+### Taxi Zone Lookup
+
+1. On the same page, download the **Taxi Zone Lookup Table** (CSV)
+2. Place it at `reference_data/taxi_zone_lookup.csv`
+
+---
+
 ## Setup
 
 ### 1. Create and activate a virtual environment
@@ -58,7 +73,26 @@ python training/train.py
 
 ## Running the System
 
-### Start infrastructure (Kafka + Zookeeper + Redis)
+### Launch script (all services at once)
+
+The launch scripts start Docker infrastructure and open each service in its own terminal window.
+
+**Windows:**
+```bash
+start.bat
+```
+
+**macOS:**
+```bash
+chmod +x start.sh
+./start.sh
+```
+
+> The macOS script uses `osascript` to open new Terminal windows — no third-party tools required.
+
+### Manual start (individual terminals)
+
+#### Start infrastructure (Kafka + Zookeeper + Redis)
 
 ```bash
 docker compose up -d
@@ -69,7 +103,7 @@ Services exposed:
 - Kafka broker: `localhost:9092`
 - Redis: `localhost:6379`
 
-### Start the streaming pipeline
+#### Start the streaming pipeline
 
 ```bash
 # Terminal 1 — consumer (populates Redis with live features)
@@ -79,14 +113,14 @@ python streaming/consumer.py
 python streaming/producer.py
 ```
 
-### Start the prediction API
+#### Start the prediction API
 
 ```bash
 # Terminal 3
 uvicorn api.main:app --port 8000
 ```
 
-### Start the dashboard
+#### Start the dashboard
 
 ```bash
 # Terminal 4
