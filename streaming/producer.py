@@ -2,10 +2,15 @@
 Kafka producer that replays NYC taxi trip events from streamed_data/.
 Each message is a single trip event: {zone_id, timestamp}.
 
+Throttles by hourly bucket: all events in a simulated hour are published
+immediately, then the producer sleeps until `--seconds-per-hour` wall
+seconds have elapsed. This gives consistent pacing regardless of how many
+trips are in each hour.
+
 Usage:
     python streaming/producer.py
-    python streaming/producer.py --speed 100   # 100x real-time
-    python streaming/producer.py --speed 0     # no throttle (max speed)
+    python streaming/producer.py --seconds-per-hour 1   # 1 simulated hour per real second
+    python streaming/producer.py --seconds-per-hour 0   # no throttle (max speed)
 """
 
 import argparse
@@ -37,43 +42,43 @@ def load_events(streamed_dir: Path) -> pl.DataFrame:
         .rename({"PULocationID": "zone_id"})
         for f in files
     ]
-    return pl.concat(frames).sort("tpep_pickup_datetime")
+    return (
+        pl.concat(frames)
+        .sort("tpep_pickup_datetime")
+        .with_columns(
+            pl.col("tpep_pickup_datetime").dt.truncate("1h").alias("hour_bucket")
+        )
+    )
 
 
-def main(speed: float) -> None:
+def main(seconds_per_hour: float) -> None:
     producer = build_producer()
     events = load_events(STREAMED_DIR)
 
     total = len(events)
-    print(f"Streaming {total:,} events from {STREAMED_DIR.name}/")
-    print(f"  Speed: {'unlimited' if speed == 0 else f'{speed}x real-time'}")
+    hours = events["hour_bucket"].n_unique()
+    print(f"Streaming {total:,} events across {hours:,} simulated hours from {STREAMED_DIR.name}/")
+    print(f"  Pace: {'unlimited' if seconds_per_hour == 0 else f'{seconds_per_hour}s wall time per simulated hour'}")
     print(f"  Topic: {TOPIC}")
     print(f"  Broker: {KAFKA_BOOTSTRAP}\n")
 
-    prev_event_ts = None
-    prev_wall_ts = None
+    published = 0
+    for (hour_bucket,), group in events.group_by(["hour_bucket"], maintain_order=True):
+        bucket_start = time.monotonic()
 
-    for i, row in enumerate(events.iter_rows(named=True)):
-        event_ts = row["tpep_pickup_datetime"]
-        msg = json.dumps({"zone_id": row["zone_id"], "timestamp": str(event_ts)})
+        for row in group.iter_rows(named=True):
+            msg = json.dumps({"zone_id": row["zone_id"], "timestamp": str(row["tpep_pickup_datetime"])})
+            producer.produce(TOPIC, value=msg.encode())
 
-        # Throttle to simulate real-time replay
-        if speed > 0 and prev_event_ts is not None:
-            event_gap = (event_ts - prev_event_ts).total_seconds()
-            wall_gap = time.monotonic() - prev_wall_ts
-            sleep_for = (event_gap / speed) - wall_gap
+        producer.poll(0)
+        published += len(group)
+        print(f"  [{published:>8,} / {total:,}]  bucket={hour_bucket}", end="\r")
+
+        if seconds_per_hour > 0:
+            elapsed = time.monotonic() - bucket_start
+            sleep_for = seconds_per_hour - elapsed
             if sleep_for > 0:
                 time.sleep(sleep_for)
-
-        producer.produce(TOPIC, value=msg.encode())
-
-        # Flush periodically to avoid buffering too many messages
-        if i % 1000 == 0:
-            producer.poll(0)
-            print(f"  [{i:>8,} / {total:,}]  ts={event_ts}", end="\r")
-
-        prev_event_ts = event_ts
-        prev_wall_ts = time.monotonic()
 
     producer.flush()
     print(f"\nDone. {total:,} events published to '{TOPIC}'.")
@@ -82,10 +87,10 @@ def main(speed: float) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--speed",
+        "--seconds-per-hour",
         type=float,
-        default=720.0,
-        help="Replay speed multiplier (default: 720 = 1 simulated hour per 5 real seconds). Use 0 for unlimited.",
+        default=5.0,
+        help="Wall seconds to spend per simulated hour (default: 5). Use 0 for unlimited.",
     )
     args = parser.parse_args()
-    main(args.speed)
+    main(args.seconds_per_hour)
