@@ -15,16 +15,31 @@ Real-time taxi demand prediction system using NYC Yellow Taxi data. Predicts tri
 
 ## Data Download
 
-### Yellow Taxi Trip Records
+All files come from the [TLC Trip Record Data](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page) page. Under **Yellow Taxi Trip Records**, download the monthly Parquet files and place them as described below.
 
-1. Go to [TLC Trip Record Data](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page)
-2. Under **Yellow Taxi Trip Records**, download the Parquet files for the months you want to use
-3. Place each file into the `raw_data/` folder — filenames should follow the pattern `yellow_tripdata_YYYY-MM.parquet`
+### `raw_data/` — historical data for model training
 
-### Taxi Zone Lookup
+Place at least 1 year of monthly Parquet files here. More history improves model quality.
 
-1. On the same page, download the **Taxi Zone Lookup Table** (CSV)
-2. Place it at `reference_data/taxi_zone_lookup.csv`
+```
+raw_data/
+  yellow_tripdata_2025-01.parquet
+  yellow_tripdata_2025-02.parquet
+  ...
+```
+
+### `streamed_data/` — data for live simulation
+
+Place the most recent month(s) here. The Kafka producer replays these files as a simulated event stream.
+
+```
+streamed_data/
+  yellow_tripdata_2026-01.parquet
+```
+
+### `reference_data/` — zone lookup
+
+Download the **Taxi Zone Lookup Table** (CSV) from the same page and place it at `reference_data/taxi_zone_lookup.csv`.
 
 ---
 
