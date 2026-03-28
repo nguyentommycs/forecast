@@ -72,13 +72,6 @@ def health():
     return {"status": "ok"}
 
 
-@app.get("/predict/{zone_id}")
-def predict_zone(zone_id: int):
-    features = _get_features(zone_id)
-    pred = _predict([features])[0]
-    return {"zone_id": zone_id, "predicted_trip_count": round(pred, 2)}
-
-
 @app.get("/predict/batch")
 def predict_batch(zones: str = Query(..., description="Comma-separated zone IDs, e.g. 1,2,3")):
     try:
@@ -105,3 +98,10 @@ def predict_batch(zones: str = Query(..., description="Comma-separated zone IDs,
     if missing:
         response["missing_zones"] = missing
     return response
+
+
+@app.get("/predict/{zone_id}")
+def predict_zone(zone_id: int):
+    features = _get_features(zone_id)
+    pred = _predict([features])[0]
+    return {"zone_id": zone_id, "predicted_trip_count": round(pred, 2)}
