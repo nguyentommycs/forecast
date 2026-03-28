@@ -84,6 +84,19 @@ except Exception as e:
     st.error(f"API unavailable: {e}")
     st.stop()
 
+# Record predictions for all zones in one Redis pipeline so history is
+# available immediately when the user switches zones.
+pipe = get_redis().pipeline()
+for zone_id in preds:
+    pipe.get(f"features:{zone_id}")
+for zone_id, raw in zip(preds, pipe.execute()):
+    if raw is not None:
+        f = json.loads(raw)
+        zone_history = st.session_state.pred_history.setdefault(zone_id, {})
+        zone_history[f["bucket"]] = preds[zone_id]
+        if len(zone_history) > 8:
+            del zone_history[sorted(zone_history)[0]]
+
 # ── Top zones bar chart ───────────────────────────────────────────────────────
 
 df_preds = (
@@ -121,12 +134,6 @@ st.subheader(f"{selected_label} — Demand History & Prediction")
 
 features = fetch_zone_features(selected_zone)
 zone_pred = preds.get(selected_zone)
-
-if features is not None and zone_pred is not None:
-    zone_history = st.session_state.pred_history.setdefault(selected_zone, {})
-    zone_history[features["bucket"]] = zone_pred
-    if len(zone_history) > 8:
-        del zone_history[sorted(zone_history)[0]]
 
 if features is None:
     st.warning("No features in Redis for this zone yet.")
