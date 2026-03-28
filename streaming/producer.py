@@ -84,8 +84,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--speed",
         type=float,
-        default=3600.0,
-        help="Replay speed multiplier (default: 3600 = 1 simulated hour per real second). Use 0 for unlimited.",
+        default=720.0,
+        help="Replay speed multiplier (default: 720 = 1 simulated hour per 5 real seconds). Use 0 for unlimited.",
     )
     args = parser.parse_args()
     main(args.speed)
