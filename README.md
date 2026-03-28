@@ -78,3 +78,19 @@ python streaming/consumer.py
 # Terminal 2 — producer (replays historical data into Kafka)
 python streaming/producer.py
 ```
+
+### Start the prediction API
+
+```bash
+# Terminal 3
+uvicorn api.main:app --port 8000
+```
+
+### Start the dashboard
+
+```bash
+# Terminal 4
+streamlit run dashboard/app.py
+```
+
+Opens at `http://localhost:8501`. The map auto-refreshes every 10 seconds.
