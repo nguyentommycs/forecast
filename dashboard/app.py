@@ -24,7 +24,7 @@ API_BASE = "http://localhost:8000"
 REDIS_HOST = "localhost"
 REDIS_PORT = 6379
 ALL_ZONES = list(range(1, 264))
-REFRESH_INTERVAL = 5
+REFRESH_INTERVAL = 10
 ZONE_LOOKUP = Path(__file__).parent.parent / "reference_data" / "taxi_zone_lookup.csv"
 
 
