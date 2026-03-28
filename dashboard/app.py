@@ -145,11 +145,11 @@ else:
     with st.sidebar:
         st.divider()
         st.caption("Simulated time")
-        st.write(current_bucket.strftime("%a %b %d, %Y  %H:%M"))
+        st.write((current_bucket - timedelta(hours=1)).strftime("%a %b %d, %Y  %H:%M"))
 
     hist_times = [current_bucket - timedelta(hours=3), current_bucket - timedelta(hours=2), current_bucket - timedelta(hours=1)]
     hist_values = [features["lag_3"], features["lag_2"], features["lag_1"]]
-    pred_times = [current_bucket - timedelta(hours=1), current_bucket + timedelta(hours=1)]
+    pred_times = [current_bucket - timedelta(hours=1), current_bucket]
     pred_values = [features["lag_1"], zone_pred]
 
     fig_ts = go.Figure()
@@ -172,7 +172,7 @@ else:
         )
     )
     fig_ts.update_layout(
-        xaxis_title="Time",
+        xaxis=dict(title="Time", dtick=3600000, tickformat="%H:%M"),
         yaxis_title="Trip Count",
         height=300,
         margin={"t": 20},
