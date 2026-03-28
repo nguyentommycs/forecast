@@ -61,6 +61,9 @@ def fetch_zone_features(zone_id: int) -> dict | None:
 st.set_page_config(page_title="NYC Taxi Demand", layout="wide")
 st.title("NYC Taxi Demand — Live Forecast")
 
+if "pred_history" not in st.session_state:
+    st.session_state.pred_history = {}
+
 zone_lookup = load_zone_lookup()
 
 with st.sidebar:
@@ -119,6 +122,12 @@ st.subheader(f"{selected_label} — Demand History & Prediction")
 features = fetch_zone_features(selected_zone)
 zone_pred = preds.get(selected_zone)
 
+if features is not None and zone_pred is not None:
+    zone_history = st.session_state.pred_history.setdefault(selected_zone, {})
+    zone_history[features["bucket"]] = zone_pred
+    if len(zone_history) > 6:
+        del zone_history[sorted(zone_history)[0]]
+
 if features is None:
     st.warning("No features in Redis for this zone yet.")
 elif zone_pred is None:
@@ -162,6 +171,39 @@ else:
     col1, col2 = st.columns(2)
     col1.metric("Predicted next hour", f"{zone_pred:.0f} trips")
     col2.metric("Last hour (actual)", f"{int(features['lag_1'])} trips")
+
+    # ── Prediction vs Actuals ─────────────────────────────────────────────────
+
+    st.subheader(f"{selected_label} — Prediction vs Actual (last 3 completed hours)")
+
+    zone_history = st.session_state.pred_history.get(selected_zone, {})
+    comparison_rows = []
+    for n, lag_key in [(1, "lag_1"), (2, "lag_2"), (3, "lag_3")]:
+        past_bucket_iso = (current_bucket - timedelta(hours=n)).isoformat()
+        stored_pred = zone_history.get(past_bucket_iso)
+        if stored_pred is not None:
+            comparison_rows.append({
+                "hour": (current_bucket - timedelta(hours=n)).strftime("%H:%M"),
+                "predicted": stored_pred,
+                "actual": features[lag_key],
+            })
+
+    if not comparison_rows:
+        st.info("Accumulating prediction history — chart fills in as simulated hours pass.")
+    else:
+        df_cmp = pd.DataFrame(comparison_rows)
+        fig_cmp = go.Figure()
+        fig_cmp.add_trace(go.Bar(name="Predicted", x=df_cmp["hour"], y=df_cmp["predicted"], marker_color="#ff7f0e"))
+        fig_cmp.add_trace(go.Bar(name="Actual", x=df_cmp["hour"], y=df_cmp["actual"], marker_color="#1f77b4"))
+        fig_cmp.update_layout(
+            barmode="group",
+            xaxis_title="Hour (simulated)",
+            yaxis_title="Trip Count",
+            height=300,
+            margin={"t": 20},
+            legend=dict(orientation="h", y=1.1),
+        )
+        st.plotly_chart(fig_cmp, use_container_width=True)
 
 # ── Auto-refresh ──────────────────────────────────────────────────────────────
 
