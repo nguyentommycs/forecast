@@ -47,6 +47,7 @@ def compute_features(zone_id: int, state: ZoneState, bucket: datetime) -> dict:
 
     return {
         "zone_id": zone_id,
+        "bucket": bucket.isoformat(),
         "hour_of_day": bucket.hour,
         "day_of_week": bucket.weekday(),
         "is_weekend": int(bucket.weekday() >= 5),

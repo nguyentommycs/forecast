@@ -124,11 +124,11 @@ if features is None:
 elif zone_pred is None:
     st.warning("No prediction available for this zone.")
 else:
-    now = datetime.now().replace(minute=0, second=0, microsecond=0)
+    current_bucket = datetime.fromisoformat(features["bucket"])
 
-    hist_times = [now - timedelta(hours=3), now - timedelta(hours=2), now - timedelta(hours=1)]
+    hist_times = [current_bucket - timedelta(hours=3), current_bucket - timedelta(hours=2), current_bucket - timedelta(hours=1)]
     hist_values = [features["lag_3"], features["lag_2"], features["lag_1"]]
-    pred_times = [now - timedelta(hours=1), now + timedelta(hours=1)]
+    pred_times = [current_bucket - timedelta(hours=1), current_bucket + timedelta(hours=1)]
     pred_values = [features["lag_1"], zone_pred]
 
     fig_ts = go.Figure()
