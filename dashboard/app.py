@@ -65,10 +65,14 @@ zone_lookup = load_zone_lookup()
 
 with st.sidebar:
     st.header("Zone Inspector")
-    selected_zone = st.number_input("Zone ID", min_value=1, max_value=263, value=132)
-    if selected_zone in zone_lookup.index:
-        row = zone_lookup.loc[selected_zone]
-        st.caption(f"{row['Zone']}, {row['Borough']}")
+    zone_options = {
+        f"{row['Zone']} ({row['Borough']})": zone_id
+        for zone_id, row in zone_lookup.iterrows()
+    }
+    sorted_labels = sorted(zone_options)
+    default_label = next((l for l, zid in zone_options.items() if zid == 132), sorted_labels[0])
+    selected_label = st.selectbox("Zone", options=sorted_labels, index=sorted_labels.index(default_label))
+    selected_zone = zone_options[selected_label]
     st.caption(f"Auto-refreshes every {REFRESH_INTERVAL}s")
 
 try:
@@ -110,8 +114,7 @@ st.plotly_chart(fig_bar, use_container_width=True)
 
 # ── Zone time series ──────────────────────────────────────────────────────────
 
-zone_name = zone_lookup.loc[selected_zone, "Zone"] if selected_zone in zone_lookup.index else str(selected_zone)
-st.subheader(f"Zone {selected_zone} ({zone_name}) — Demand History & Prediction")
+st.subheader(f"{selected_label} — Demand History & Prediction")
 
 features = fetch_zone_features(selected_zone)
 zone_pred = preds.get(selected_zone)
