@@ -27,8 +27,13 @@ FEATURE_COLS = [
     "lag_3",
     "lag_6",
     "lag_12",
-    "lag_24",
     "rolling_mean_6",
+    "lag_168",
+    "rolling_mean_3",
+    "rolling_std_6",
+    "rolling_mean_12",
+    "hour_sin",
+    "hour_cos",
 ]
 TARGET_COL = "trip_count"
 TEST_WEEKS = 2

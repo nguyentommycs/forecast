@@ -11,6 +11,7 @@ Usage:
 """
 
 import json
+import math
 import signal
 import sys
 from collections import deque
@@ -27,8 +28,8 @@ GROUP_ID = "feature-engine"
 REDIS_HOST = "localhost"
 REDIS_PORT = 6379
 
-HISTORY_LEN = 24  # hours of completed buckets to keep (covers lag_24)
-LAG_OFFSETS = [1, 2, 3, 4, 5, 6, 12, 24]
+HISTORY_LEN = 168  # hours of completed buckets to keep (covers lag_168)
+LAG_OFFSETS = [1, 2, 3, 4, 5, 6, 12, 168]
 ROLLING_WINDOW = 6
 
 
@@ -41,9 +42,18 @@ class ZoneState:
 
 
 def compute_features(zone_id: int, state: ZoneState, bucket: datetime) -> dict:
-    hist = list(state.history)  # oldest … newest completed hour
+    hist = list(state.history)  # oldest ... newest completed hour
     lags = {f"lag_{n}": hist[-n] if n <= len(hist) else 0 for n in LAG_OFFSETS}
     rolling_mean_6 = sum(hist[-ROLLING_WINDOW:]) / ROLLING_WINDOW if len(hist) >= ROLLING_WINDOW else 0.0
+    rolling_mean_3 = sum(hist[-3:]) / 3 if len(hist) >= 3 else 0.0
+    rolling_mean_12 = sum(hist[-12:]) / 12 if len(hist) >= 12 else 0.0
+    hist_6 = hist[-ROLLING_WINDOW:]
+    if len(hist_6) >= 2:
+        mean_6 = sum(hist_6) / len(hist_6)
+        rolling_std_6 = math.sqrt(sum((x - mean_6) ** 2 for x in hist_6) / (len(hist_6) - 1))
+    else:
+        rolling_std_6 = 0.0
+    hour_rad = bucket.hour * 2 * math.pi / 24
 
     return {
         "zone_id": zone_id,
@@ -52,6 +62,11 @@ def compute_features(zone_id: int, state: ZoneState, bucket: datetime) -> dict:
         "day_of_week": bucket.weekday(),
         "is_weekend": int(bucket.weekday() >= 5),
         "rolling_mean_6": rolling_mean_6,
+        "rolling_mean_3": rolling_mean_3,
+        "rolling_mean_12": rolling_mean_12,
+        "rolling_std_6": rolling_std_6,
+        "hour_sin": math.sin(hour_rad),
+        "hour_cos": math.cos(hour_rad),
         **lags,
     }
 
