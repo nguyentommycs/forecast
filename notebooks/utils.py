@@ -12,6 +12,8 @@ ROOT = Path(__file__).parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from config import LGBM_PARAMS  # noqa: E402
+
 FEATURES_FILE = ROOT / "processed_data" / "features.parquet"
 AGGREGATED_FILE = ROOT / "processed_data" / "aggregated.parquet"
 MODEL_FILE = ROOT / "models" / "model.lgb"
@@ -23,19 +25,6 @@ FEATURE_COLS = [
 ]
 TARGET_COL = "trip_count"
 TEST_WEEKS = 2
-
-LGBM_PARAMS = dict(
-    n_estimators=500,
-    learning_rate=0.05,
-    num_leaves=63,
-    min_child_samples=20,
-    feature_fraction=0.8,
-    bagging_fraction=0.8,
-    bagging_freq=5,
-    random_state=42,
-    n_jobs=-1,
-    verbose=-1,
-)
 
 
 def load_booster() -> lgb.Booster:

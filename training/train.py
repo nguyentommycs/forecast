@@ -12,6 +12,10 @@ import pandas as pd
 import polars as pl
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from config import LGBM_PARAMS
+
 FEATURES_FILE = Path(__file__).parent.parent / "processed_data" / "features.parquet"
 MODEL_DIR = Path(__file__).parent.parent / "models"
 MODEL_FILE = MODEL_DIR / "model.lgb"
@@ -127,18 +131,7 @@ def main() -> None:
     X_test["zone_id"] = X_test["zone_id"].astype("category")
 
     print("\nTraining LightGBM model...")
-    model = lgb.LGBMRegressor(
-        n_estimators=500,
-        learning_rate=0.05,
-        num_leaves=63,
-        min_child_samples=20,
-        feature_fraction=0.8,
-        bagging_fraction=0.8,
-        bagging_freq=5,
-        random_state=42,
-        n_jobs=-1,
-        verbose=-1,
-    )
+    model = lgb.LGBMRegressor(**LGBM_PARAMS)
     model.fit(
         X_train,
         y_train,

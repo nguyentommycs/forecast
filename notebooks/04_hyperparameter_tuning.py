@@ -39,6 +39,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 from sklearn.model_selection import TimeSeriesSplit
 
 from utils import load_features, split, MODEL_FILE
+from config import LGBM_PARAMS
 
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
@@ -46,6 +47,7 @@ N_SPLITS    = 5      # TimeSeriesSplit folds
 N_TRIALS    = 100    # Optuna trials; reduce to 20-30 for a quick test
 EARLY_STOP  = 50     # early stopping rounds per fold
 RANDOM_SEED = 42
+DEVICE      = "cuda" # "cuda" for GPU (requires CUDA toolkit), "cpu" to disable
 
 # utils.py FEATURE_COLS is outdated (11 features); use train.py's 16-feature set
 FEATURE_COLS = [
@@ -116,7 +118,7 @@ def cv_rmse(params: dict, X: pd.DataFrame, y: np.ndarray, n_splits: int = N_SPLI
 
         model = lgb.LGBMRegressor(
             **params,
-            n_jobs=-1,
+            device=DEVICE,
             verbose=-1,
             random_state=RANDOM_SEED,
         )
@@ -136,15 +138,8 @@ def cv_rmse(params: dict, X: pd.DataFrame, y: np.ndarray, n_splits: int = N_SPLI
     return float(np.mean(fold_rmses))
 
 # %%
-BASELINE_PARAMS = dict(
-    n_estimators=500,
-    learning_rate=0.05,
-    num_leaves=63,
-    min_child_samples=20,
-    feature_fraction=0.8,
-    bagging_fraction=0.8,
-    bagging_freq=5,
-)
+# Baseline params come from config.py -- the single source of truth
+BASELINE_PARAMS = {k: v for k, v in LGBM_PARAMS.items() if k not in ("random_state", "n_jobs", "verbose", "device")}
 
 print("Running baseline CV (5 folds)...")
 baseline_cv_rmse = cv_rmse(BASELINE_PARAMS, X_train_full, y_train_full)
@@ -265,7 +260,7 @@ y_test_np  = test_df[TARGET_COL].to_numpy()
 
 best_model = lgb.LGBMRegressor(
     **best_params,
-    n_jobs=-1,
+    device=DEVICE,
     verbose=-1,
     random_state=RANDOM_SEED,
 )
@@ -297,17 +292,17 @@ if SAVE_TUNED_MODEL:
     print("Remember to run `python retrain.py` afterwards to regenerate models/report.txt.")
 else:
     print("Model NOT saved. Recommended workflow:")
-    print("  1. Copy the param dict below into train.py and utils.py")
+    print("  1. Copy the param dict below into config.py")
     print("  2. Run: python retrain.py")
 
 # %% [markdown]
 # ## Drop-in Replacement Params
 #
-# Copy the block below into `training/train.py` (lines 130-141) and `notebooks/utils.py` (lines 27-38).
+# Copy the block below into `config.py` to update the central hyperparameter store.
 
 # %%
 print("=" * 60)
-print("Drop-in replacement for train.py and utils.py:")
+print("Drop-in replacement for config.py:")
 print("=" * 60)
 print()
 print("LGBM_PARAMS = dict(")
@@ -360,7 +355,7 @@ for k, v in best_params.items():
     lines.append(f"  {k:<22} {v!r:<14}  (baseline: {baseline_val})")
 lines.append("")
 lines.append("=" * 60)
-lines.append("DROP-IN REPLACEMENT")
+lines.append("DROP-IN REPLACEMENT (paste into config.py)")
 lines.append("=" * 60)
 lines.append("LGBM_PARAMS = dict(")
 for k, v in best_params.items():
