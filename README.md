@@ -6,6 +6,51 @@ Real-time taxi demand prediction system using NYC Yellow Taxi data. Predicts tri
 
 ---
 
+## Architecture
+
+### How it works
+
+The system has two phases:
+
+**Training (offline)** — run once before the live pipeline. Raw historical trip records are aggregated into hourly counts, transformed into lag and rolling-mean features, and used to train a LightGBM regression model saved to `models/model.lgb`.
+
+**Live streaming** — four concurrent processes simulate and serve real-time demand. A Kafka producer replays recent trip data as a live event stream. A consumer reads those events, maintains a rolling 24-hour feature window per zone, and writes the latest features to Redis. A FastAPI service reads from Redis and uses the trained model to return next-hour trip count predictions. A Streamlit dashboard polls the API every 10 seconds and visualizes predictions and actuals across all zones.
+
+### Diagram
+
+```mermaid
+flowchart TD
+    subgraph Offline["Offline — python retrain.py"]
+        A[raw_data/\nyellow_tripdata_*.parquet] --> B[Preprocessing\ndata/preprocessing.py]
+        B --> C[processed_data/\naggregated.parquet]
+        C --> D[Feature Engineering\ndata/features.py]
+        D --> E[processed_data/\nfeatures.parquet]
+        E --> F[Model Training\ntraining/train.py]
+        F --> G[models/model.lgb]
+    end
+
+    subgraph Docker["Docker"]
+        H[Zookeeper\n:2181]
+        I[Kafka\n:9092]
+        J[Redis\n:6379]
+        H --> I
+    end
+
+    subgraph Live["Live Streaming"]
+        K[streamed_data/\nyellow_tripdata_*.parquet]
+        K --> L[Producer\nstreaming/producer.py]
+        L -->|taxi-trips topic| I
+        I -->|taxi-trips topic| M[Consumer\nstreaming/consumer.py]
+        M -->|features:zone_id| J
+        G --> N[Prediction API\napi/main.py :8000]
+        J --> N
+        N -->|batch predictions| O[Dashboard\ndashboard/app.py :8501]
+        J -->|lag history| O
+    end
+```
+
+---
+
 ## Prerequisites
 
 - Python 3.10+
