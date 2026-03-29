@@ -44,10 +44,10 @@ from config import LGBM_PARAMS
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 N_SPLITS    = 5      # TimeSeriesSplit folds
-N_TRIALS    = 100    # Optuna trials; reduce to 20-30 for a quick test
+N_TRIALS    = 20    # Optuna trials; reduce to 20-30 for a quick test
 EARLY_STOP  = 50     # early stopping rounds per fold
 RANDOM_SEED = 42
-DEVICE      = "cuda" # "cuda" for GPU (requires CUDA toolkit), "cpu" to disable
+DEVICE      = "cpu" # "cuda" for GPU (requires CUDA toolkit), "cpu" to disable
 
 # utils.py FEATURE_COLS is outdated (11 features); use train.py's 16-feature set
 FEATURE_COLS = [
@@ -119,6 +119,7 @@ def cv_rmse(params: dict, X: pd.DataFrame, y: np.ndarray, n_splits: int = N_SPLI
         model = lgb.LGBMRegressor(
             **params,
             device=DEVICE,
+            n_jobs=-1,
             verbose=-1,
             random_state=RANDOM_SEED,
         )
@@ -261,6 +262,7 @@ y_test_np  = test_df[TARGET_COL].to_numpy()
 best_model = lgb.LGBMRegressor(
     **best_params,
     device=DEVICE,
+    n_jobs=-1,
     verbose=-1,
     random_state=RANDOM_SEED,
 )
