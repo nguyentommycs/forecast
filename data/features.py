@@ -30,7 +30,9 @@ def build_features(df: pl.DataFrame) -> pl.DataFrame:
                 .alias(f"lag_{n}")
                 for n in LAG_OFFSETS
             ],
+            # shift(1) so the window covers [t-6, t-1], not [t-5, t] (which would leak the target)
             pl.col("trip_count")
+            .shift(1)
             .rolling_mean(window_size=ROLLING_WINDOW)
             .over("zone_id")
             .alias("rolling_mean_6"),
