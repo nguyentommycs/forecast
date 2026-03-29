@@ -14,3 +14,4 @@ plotly>=5.22.0
 shap>=0.45.0
 matplotlib>=3.8.0
 jupytext>=1.16.0
+optuna>=3.6.0

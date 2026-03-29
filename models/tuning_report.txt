@@ -1,0 +1,73 @@
+Hyperparameter Tuning Report
+Run date: 2026-03-29 00:34:14
+Optuna trials: 20  |  CV folds: 5  |  Early stopping: 50
+
+============================================================
+METRICS SUMMARY
+============================================================
+Baseline CV RMSE:               10.1075
+Best CV RMSE:                   10.0588
+CV improvement:                 +0.0486
+Baseline test RMSE:             8.9500
+Best-params test RMSE:          8.7978
+Best-params test MAE:           3.3492
+Best iteration (early stopped): 752
+
+============================================================
+BEST HYPERPARAMETERS
+============================================================
+  num_leaves             200             (baseline: 114)
+  learning_rate          0.03550028954671056  (baseline: 0.0642033)
+  n_estimators           1670            (baseline: 532)
+  min_child_samples      55              (baseline: 98)
+  feature_fraction       0.8103053788879377  (baseline: 0.887566)
+  bagging_fraction       0.9213202669477475  (baseline: 0.969749)
+  bagging_freq           6               (baseline: 9)
+  reg_alpha              0.22433465610080225  (baseline: 0.00240492)
+  reg_lambda             4.807591395020507  (baseline: 1.98093)
+
+============================================================
+DROP-IN REPLACEMENT (paste into config.py)
+============================================================
+LGBM_PARAMS = dict(
+    num_leaves=200,
+    learning_rate=0.0355003,
+    n_estimators=1670,
+    min_child_samples=55,
+    feature_fraction=0.810305,
+    bagging_fraction=0.92132,
+    bagging_freq=6,
+    reg_alpha=0.224335,
+    reg_lambda=4.80759,
+    random_state=42,
+    n_jobs=-1,
+    verbose=-1,
+)
+
+============================================================
+TOP 10 TRIALS
+============================================================
+ trial  cv_rmse  bagging_fraction  bagging_freq  feature_fraction  learning_rate  min_child_samples  n_estimators  num_leaves  reg_alpha  reg_lambda
+    19  10.0588            0.9213             6            0.8103         0.0355                 55          1670         200     0.2243      4.8076
+     6  10.0721            0.9848             8            0.5924         0.0289                 59          1136         139     2.8542      1.1310
+    11  10.0788            0.9940             7            0.7506         0.0348                 43           791         200     0.0014      0.0113
+    10  10.0864            0.9538             7            0.7513         0.0345                 41           781         194     0.0029      0.0091
+    12  10.0882            0.8657             7            0.7344         0.0435                 41           838         193     0.0001      8.8267
+    17  10.0984            0.9249             5            0.6808         0.0441                 79           637         137     9.8810      0.0392
+     0  10.1075            0.9697             9            0.8876         0.0642                 98           532         114     0.0024      1.9809
+    14  10.1348            0.8758             7            0.9965         0.0665                 51          1032         165     0.0001      0.0000
+     3  10.1404            0.6832             5            0.6461         0.0269                 22          1301          98     0.1166      0.0000
+     2  10.1606            0.5909             2            0.6062         0.0107                 85          1946         148     0.0000      0.0005
+
+============================================================
+HYPERPARAMETER IMPORTANCE (fANOVA)
+============================================================
+  learning_rate          0.4590
+  bagging_fraction       0.2192
+  feature_fraction       0.1169
+  num_leaves             0.1139
+  n_estimators           0.0497
+  min_child_samples      0.0206
+  bagging_freq           0.0171
+  reg_lambda             0.0023
+  reg_alpha              0.0013
