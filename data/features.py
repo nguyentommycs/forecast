@@ -4,6 +4,7 @@ Computes lag and rolling-mean features per zone, then writes
 processed_data/features.parquet.
 """
 
+import math
 from pathlib import Path
 
 import polars as pl
@@ -12,7 +13,7 @@ INPUT_FILE = Path(__file__).parent.parent / "processed_data" / "aggregated.parqu
 OUTPUT_FILE = Path(__file__).parent.parent / "processed_data" / "features.parquet"
 
 # Lag offsets in number of 1-hour buckets
-LAG_OFFSETS = [1, 2, 3, 6, 12, 24]  # up to same hour yesterday
+LAG_OFFSETS = [1, 2, 3, 6, 12, 168]  # includes same hour last week
 ROLLING_WINDOW = 6  # 6-hour rolling mean
 
 
@@ -30,12 +31,33 @@ def build_features(df: pl.DataFrame) -> pl.DataFrame:
                 .alias(f"lag_{n}")
                 for n in LAG_OFFSETS
             ],
-            # shift(1) so the window covers [t-6, t-1], not [t-5, t] (which would leak the target)
+            # shift(1) so each window covers only prior completed hours, not the target
             pl.col("trip_count")
             .shift(1)
             .rolling_mean(window_size=ROLLING_WINDOW)
             .over("zone_id")
             .alias("rolling_mean_6"),
+            pl.col("trip_count")
+            .shift(1)
+            .rolling_mean(window_size=3)
+            .over("zone_id")
+            .alias("rolling_mean_3"),
+            pl.col("trip_count")
+            .shift(1)
+            .rolling_mean(window_size=12)
+            .over("zone_id")
+            .alias("rolling_mean_12"),
+            pl.col("trip_count")
+            .shift(1)
+            .rolling_std(window_size=ROLLING_WINDOW)
+            .over("zone_id")
+            .alias("rolling_std_6"),
+            (pl.col("time_bucket").dt.hour().cast(pl.Float64) * (2 * math.pi / 24))
+            .sin()
+            .alias("hour_sin"),
+            (pl.col("time_bucket").dt.hour().cast(pl.Float64) * (2 * math.pi / 24))
+            .cos()
+            .alias("hour_cos"),
         )
         .drop_nulls()
     )
