@@ -116,7 +116,7 @@ pip install -r requirements.txt
 
 ## Data Preparation
 
-Run this once before starting the streaming pipeline, and any time you add new data:
+There is already a trained model in this repo, but it may be outdated. You may retrain the model by running this.
 
 ```bash
 python retrain.py
@@ -146,6 +146,8 @@ chmod +x start.sh
 > The macOS script uses `osascript` to open new Terminal windows — no third-party tools required.
 
 ### Manual start (individual terminals)
+
+Run these steps manually if the launch scripts don't work.
 
 #### Start infrastructure (Kafka + Zookeeper + Redis)
 
