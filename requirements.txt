@@ -11,3 +11,6 @@ confluent-kafka>=2.3.0
 redis>=5.0.0
 streamlit>=1.35.0
 plotly>=5.22.0
+shap>=0.45.0
+matplotlib>=3.8.0
+jupytext>=1.16.0
