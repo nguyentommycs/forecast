@@ -1,6 +1,6 @@
 # NYC Taxi Demand Forecasting
 
-Real-time taxi demand prediction system using NYC Yellow Taxi data. Predicts trip count per zone for the next 10 minutes with <200ms API latency, running locally on a single machine.
+Real-time taxi demand prediction system using NYC Yellow Taxi data. Predicts trip count per zone for the next hour, running locally on a single machine.
 
 **Stack:** LightGBM · FastAPI · Apache Kafka · Redis · Streamlit · Python 3.10+
 
